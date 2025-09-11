@@ -61,7 +61,7 @@ def create_compra():
         "comp_data": dataCompra,
         "comp_dataentrega": dataEntrega,
         "usuario": {
-            "usu_id": usuario.get("usu_id"),
+            "usu_cpf": usuario.get("usu_cpf"),
             "usu_nome": usuario.get("usu_nome"),
             "usu_email": usuario.get("usu_email")
         },
