@@ -1,6 +1,8 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from usuarioCrud import *
+from vendedorCrud import *
+from produtoCrud import *
 from compraCrud import *
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
@@ -44,7 +46,28 @@ while (key != 'S'):
             delete_usuario(nome, sobrenome)
             
     elif (key == '2'):
-        print("Menu do Vendedor")        
+        print("Menu do Vendedor")  
+        print("1-Create Vendedor")
+        print("2-Read Vendedor")
+        print("3-Update Vendedor")
+        print("4-Delete Vendedor")
+        sub = input("Digite a opção desejada? (V para voltar) ").upper()
+        if (sub == '1'):
+            print("Create Vendedor")
+            create_vendedor()
+            
+        elif (sub == '2'):
+            nome = input("Read Vendedor, deseja algum CNPJ especifico? ")
+            read_vendedor(nome)
+
+        elif (sub == '3'):
+            nome = input("Update vendendedor, deseja algum nome especifico? ")
+            update_compra(nome)
+
+        elif (sub == '4'):
+            print("delete produto")
+            nome = input("Venda a ser deletada: ")
+            delete_compra(nome, sobrenome)       
     elif (key == '3'):
         print("Menu do Produto")        
     elif (key == '4'):

@@ -29,32 +29,11 @@ def create_vendedor():
     sobrenome = input("Sobrenome: ")
     nomeFormat = f"{nome} {sobrenome}"
     cnpj = input("CNPJ: ")
-    prod = []
-    valor = 0  # Inicializa o valor
-    key = 'S'
-    while key != 'N':
-        produtoCod = input("Código do produto: ")
-        if not produtoCod:
-            print("Código do produto não pode ser vazio.")
-            continue
-
-        produtoNome = input("Nome do produto: ")
-        produtoValor = float(input("Valor do produto: "))
-        produtoQuantidade = int(input("Quantidade do produto: "))
-        valor += produtoValor * produtoQuantidade
-        produtosObj = {
-            "prod_cod": produtoCod,
-            "prod_nome": produtoNome,
-            "prod_valor": produtoValor,
-            "prod_quantidade": produtoQuantidade
-        }
-        prod.append(produtosObj)
-        key = input("Deseja cadastrar um novo produto (S/N)? ").upper()
-
+    valor = 0  
     mydoc = {
         "ven_nome": nomeFormat,
         "ven_cnpj": cnpj,
-        "ven_produtos": prod,
+        "produtos": [],
         "ven_valor_total": valor
     }
     x = col_vendedor.insert_one(mydoc)
