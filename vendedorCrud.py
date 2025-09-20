@@ -39,17 +39,17 @@ def create_vendedor():
     x = col_vendedor.insert_one(mydoc)
     print("Documento inserido com ID ",x.inserted_id)
 
-def read_vendedor(nome):
-    #Read
+def read_vendedor(cnpj):
+    # Read
     global db
-    mycol = db.usuario
-    print("Usuários existentes: ")
-    if not len(nome):
-        mydoc = mycol.find().sort("ven_nome")
+    mycol = db.vendedor  # Corrigido para buscar na coleção correta
+    print("Vendedores existentes: ")
+    if not cnpj:
+        mydoc = mycol.find()
         for x in mydoc:
-            print(x["ven_nome"],x["ven_email"])
+            print(x["ven_nome"], x["ven_cnpj"])
     else:
-        myquery = {"ven_nome": nome}
+        myquery = {"ven_cnpj": cnpj}
         mydoc = mycol.find(myquery)
         for x in mydoc:
             print(x)

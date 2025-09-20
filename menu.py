@@ -4,6 +4,7 @@ from usuarioCrud import *
 from vendedorCrud import *
 from produtoCrud import *
 from compraCrud import *
+from favoritosCrud import *  # Adicione esta linha
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
@@ -18,6 +19,7 @@ while (key != 'S'):
     print("2-CRUD Vendedor")
     print("3-CRUD Produto")
     print("4-CRUD Compra")
+    print("5-CRUD Favorito")  # Novo menu
     key = input("Digite a opção desejada? (S para sair) ").upper()
 
     if (key == '1'):
@@ -30,21 +32,18 @@ while (key != 'S'):
         if (sub == '1'):
             print("Create usuario")
             create_usuario()
-            
         elif (sub == '2'):
             nome = input("Read usuário, deseja algum nome especifico? ")
             read_usuario(nome)
-        
         elif (sub == '3'):
             nome = input("Update usuário, deseja algum nome especifico? ")
             update_usuario(nome)
-
         elif (sub == '4'):
             print("delete usuario")
             nome = input("Nome a ser deletado: ")
             sobrenome = input("Sobrenome a ser deletado: ")
             delete_usuario(nome, sobrenome)
-            
+
     elif (key == '2'):
         print("Menu do Vendedor")  
         print("1-Create Vendedor")
@@ -55,21 +54,38 @@ while (key != 'S'):
         if (sub == '1'):
             print("Create Vendedor")
             create_vendedor()
-            
         elif (sub == '2'):
-            nome = input("Read Vendedor, deseja algum CNPJ especifico? ")
-            read_vendedor(nome)
-
+            cnpj = input("Read Vendedor, deseja algum CNPJ especifico? ")
+            read_vendedor(cnpj)
         elif (sub == '3'):
-            nome = input("Update vendendedor, deseja algum nome especifico? ")
-            update_compra(nome)
+            cnpj = input("Update vendedor, deseja algum CNPJ especifico? ")
+            update_vendedor(cnpj)
+        elif (sub == '4'):
+            print("delete vendedor")
+            cnpj = input("CNPJ a ser deletado: ")
+            delete_vendedor(cnpj)
 
+    elif (key == '3'):
+        print("Menu do Produto")
+        print("1-Create Produto")
+        print("2-Read Produto")
+        print("3-Update Produto")
+        print("4-Delete Produto")
+        sub = input("Digite a opção desejada? (V para voltar) ").upper()
+        if (sub == '1'):
+            print("Create produto")
+            create_produto()
+        elif (sub == '2'):
+            nome = input("Read produto, deseja algum nome especifico? ")
+            read_produto(nome)
+        elif (sub == '3'):
+            nome = input("Update produto, deseja algum nome especifico? ")
+            update_produto(nome)
         elif (sub == '4'):
             print("delete produto")
-            nome = input("Venda a ser deletada: ")
-            delete_compra(nome, sobrenome)       
-    elif (key == '3'):
-        print("Menu do Produto")        
+            nome = input("Nome do produto a ser deletado: ")
+            delete_produto(nome)
+
     elif (key == '4'):
         print("Menu de Compra")
         print("1-Create Compra")
@@ -80,19 +96,36 @@ while (key != 'S'):
         if (sub == '1'):
             print("Create compra")
             create_compra()
-            
         elif (sub == '2'):
             nome = input("Read compra, deseja algum CPF especifico? ")
             read_compra(nome)
-
         elif (sub == '3'):
-            nome = input("Update produto, deseja algum nome especifico? ")
+            nome = input("Update compra, deseja algum CPF especifico? ")
             update_compra(nome)
-
         elif (sub == '4'):
-            print("delete produto")
-            nome = input("Produto a ser deletado: ")
-            sobrenome = input("Sobrenome a ser deletado: ")
-            delete_compra(nome, sobrenome)        
+            print("delete compra")
+            nome = input("CPF da compra a ser deletada: ")
+            delete_compra(nome)
+
+    elif (key == '5'):
+        print("Menu de Favorito")
+        print("1-Create Favorito")
+        print("2-Read Favorito")
+        print("3-Update Favorito")
+        print("4-Delete Favorito")
+        sub = input("Digite a opção desejada? (V para voltar) ").upper()
+        if (sub == '1'):
+            print("Create favorito")
+            create_favorito()
+        elif (sub == '2'):
+            nome = input("Read favorito, deseja algum nome especifico? ")
+            read_favorito(nome)
+        elif (sub == '3'):
+            nome = input("Update favorito, deseja algum nome especifico? ")
+            update_favorito(nome)
+        elif (sub == '4'):
+            print("delete favorito")
+            nome = input("Nome do favorito a ser deletado: ")
+            delete_favorito(nome)
 
 print("Tchau Prof...")
