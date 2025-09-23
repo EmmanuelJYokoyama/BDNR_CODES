@@ -4,6 +4,7 @@ from datetime import datetime
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
+# Create a new client and connect to the server
 client = MongoClient(uri, server_api=ServerApi('1'))
 global db
 db = client.mercado_livre
@@ -98,8 +99,6 @@ def create_compra():
     print("Documento inserido com ID ",x.inserted_id)
 
 def read_compra(cpf):
-    # Busca compras pelo CPF
-    global db
     compras_col = db.compras
     compras = compras_col.find({"usuario.usu_cpf": cpf})
     encontrou = False

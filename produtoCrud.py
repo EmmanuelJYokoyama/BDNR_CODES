@@ -3,6 +3,7 @@ from pymongo.server_api import ServerApi
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
+global db
 client = MongoClient(uri, server_api=ServerApi('1'))
 db = client.mercado_livre
 
@@ -79,14 +80,13 @@ def read_produto(prod):
 
 def update_produto(prod_cod):
     col_produto = db.produto
-    myquery = {"prod_cod": prod_cod}
-    produto = col_produto.find_one(myquery)
+    produto = col_produto.find_one(prod_cod)
 
     if not produto:
         print("Produto não encontrado.")
         return
 
-    print("Dados atuais do produto:", produto)
+    print("Dados atuais do produto:", read_produto(prod_cod))
 
     novo_nome = input("Novo Nome (Enter para manter): ")
     if novo_nome:
@@ -119,11 +119,24 @@ def update_produto(prod_cod):
     col_produto.update_one(myquery, {"$set": produto})
     print("Produto atualizado com sucesso!")
 
-def delete_produto(prod_id):
+def delete_produto(prod_cod):
     col_produto = db.produto
-    result = col_produto.delete_one({"prod_id": prod_id})
+    try:
+        cod = int(prod_cod)
+    except (TypeError, ValueError):
+        print("Código inválido. Informe um número inteiro.")
+        return
+
+    # Tenta deletar pelo inteiro (caso correto)
+    result = col_produto.delete_one({"prod_cod": cod})
     if result.deleted_count > 0:
         print("Produto deletado com sucesso!")
+        return
+
+    # Fallback: alguns registros podem ter sido salvos como string
+    result_str = col_produto.delete_one({"prod_cod": str(cod)})
+    if result_str.deleted_count > 0:
+        print("Produto deletado (campo salvo como string).")
     else:
-        print("Nenhum produto encontrado com esse ID.")
+        print("Nenhum produto encontrado com esse código.")
 

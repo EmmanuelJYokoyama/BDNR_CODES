@@ -46,7 +46,7 @@ def read_vendedor(cnpj=None):
     encontrou = False
     for v in col.find(filtro):
         encontrou = True
-        print(f"Nome: {v.get('ven_nome', '')}")
+        print(f"\nNome: {v.get('ven_nome', '')}")
         print(f"CNPJ: {v.get('ven_cnpj', '')}")
         print(f"Email: {v.get('ven_email', '')}")
         print(f"Valor total: {v.get('ven_valor_total', 0)}")

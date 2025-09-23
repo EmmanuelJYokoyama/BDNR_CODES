@@ -66,7 +66,7 @@ while (key != 'S'):
             delete_vendedor(cnpj)
 
     elif (key == '3'):
-        print("\n\t\n\tMenu do Produto")
+        print("\n\tMenu do Produto")
         print("1-Create Produto")
         print("2-Read Produto")
         print("3-Update Produto")
@@ -79,11 +79,11 @@ while (key != 'S'):
             nome = input("Read produto, deseja algum nome especifico? ")
             read_produto(nome)
         elif (sub == '3'):
-            nome = input("Update produto, deseja algum nome especifico? ")
+            nome = int(input("Update produto, deseja algum ID especifico? "))
             update_produto(nome)
         elif (sub == '4'):
-            print("delete produto")
-            nome = input("Nome do produto a ser deletado: ")
+            print("Deletar produto")
+            nome = input("Id do produto a ser deletado: ")
             delete_produto(nome)
 
     elif (key == '4'):
