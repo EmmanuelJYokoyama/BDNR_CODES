@@ -3,7 +3,6 @@ from pymongo.server_api import ServerApi
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
-# Conexão com o banco
 client = MongoClient(uri, server_api=ServerApi('1'))
 db = client.mercado_livre
 
@@ -46,18 +45,37 @@ def create_produto():
     x = col_produto.insert_one(produto)
     print("Produto inserido com ID", x.inserted_id)
 
-def read_produto(idprod=None):
+def read_produto(prod):
     col_produto = db.produto
-    print("\nProdutos encontrados:")
-    if not idprod:
-        docs = col_produto.find().sort("prod_nome")
-        for x in docs:
-            print(x)
-    else:
-        myquery = {"prod_cod": idprod}
-        docs = col_produto.find(myquery)
-        for x in docs:
-            print(x)
+
+    if prod:  # busca por nome exato
+        produtos = col_produto.find({"prod_nome": prod})
+    else:  # lista todos
+        produtos = col_produto.find().sort("prod_nome")
+
+    encontrou = False
+    for p in produtos:
+        encontrou = True
+        print(f"\nCódigo: {p.get('prod_cod', '')}")
+        print(f"Nome: {p.get('prod_nome', '')}")
+        print(f"Descrição: {p.get('prod_descricao', '')}")
+        valor = p.get('prod_valor', 0)
+        if isinstance(valor, (int, float)):
+            print(f"Valor: R$ {valor:.2f}")
+        else:
+            print(f"Valor: {valor}")
+        print(f"Quantidade: {p.get('prod_quantidade', 0)}")
+        vendedor = p.get("vendedor", {}) or {}
+        if vendedor:
+            print("Vendedor:")
+            print(f"- Nome: {vendedor.get('ven_nome', '')}")
+            print(f"- CNPJ: {vendedor.get('ven_cnpj', '')}")
+        else:
+            print("Vendedor: (não informado)")
+        print("-" * 30)
+
+    if not encontrou:
+        print("Nenhum produto encontrado.")
 
 def update_produto(prod_cod):
     col_produto = db.produto

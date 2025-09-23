@@ -19,11 +19,11 @@ while (key != 'S'):
     print("2-CRUD Vendedor")
     print("3-CRUD Produto")
     print("4-CRUD Compra")
-    print("5-CRUD Favorito")  # Novo menu
+    print("5-CRUD Favorito") 
     key = input("Digite a opção desejada? (S para sair) ").upper()
 
     if (key == '1'):
-        print("Menu do Usuário")
+        print("\n\tMenu do Usuário")
         print("1-Create Usuário")
         print("2-Read Usuário")
         print("3-Update Usuário")
@@ -45,7 +45,7 @@ while (key != 'S'):
             delete_usuario(nome, sobrenome)
 
     elif (key == '2'):
-        print("Menu do Vendedor")  
+        print("\n\tMenu do Vendedor")  
         print("1-Create Vendedor")
         print("2-Read Vendedor")
         print("3-Update Vendedor")
@@ -66,7 +66,7 @@ while (key != 'S'):
             delete_vendedor(cnpj)
 
     elif (key == '3'):
-        print("Menu do Produto")
+        print("\n\t\n\tMenu do Produto")
         print("1-Create Produto")
         print("2-Read Produto")
         print("3-Update Produto")
@@ -87,7 +87,7 @@ while (key != 'S'):
             delete_produto(nome)
 
     elif (key == '4'):
-        print("Menu de Compra")
+        print("\n\tMenu de Compra")
         print("1-Create Compra")
         print("2-Read Compra")
         print("3-Update Compra")
@@ -108,7 +108,7 @@ while (key != 'S'):
             delete_compra(nome)
 
     elif (key == '5'):
-        print("Menu de Favorito")
+        print("\n\tMenu de Favorito")
         print("1-Create Favorito")
         print("2-Read Favorito")
         print("3-Update Favorito")
