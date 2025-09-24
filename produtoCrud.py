@@ -49,9 +49,9 @@ def create_produto():
 def read_produto(prod):
     col_produto = db.produto
 
-    if prod:  # busca por nome exato
+    if prod:  
         produtos = col_produto.find({"prod_nome": prod})
-    else:  # lista todos
+    else:
         produtos = col_produto.find().sort("prod_nome")
 
     encontrou = False
@@ -80,43 +80,51 @@ def read_produto(prod):
 
 def update_produto(prod_cod):
     col_produto = db.produto
-    produto = col_produto.find_one(prod_cod)
+    col_vendedor = db.vendedor  
 
+    cod = int(str(prod_cod).strip())
+
+    produto = col_produto.find_one({"prod_cod": cod}) or col_produto.find_one({"prod_cod": str(cod)})
     if not produto:
         print("Produto não encontrado.")
         return
 
-    print("Dados atuais do produto:", read_produto(prod_cod))
+    vend = (produto.get("vendedor") or {})
+    print(f"\nAtual: Código:{produto.get('prod_cod')} | Nome:{produto.get('prod_nome')} | Valor:{produto.get('prod_valor')} | Qtd:{produto.get('prod_quantidade')}")
+    print(f"Vendedor: {vend.get('ven_nome','')} | CNPJ: {vend.get('ven_cnpj','')}")
 
-    novo_nome = input("Novo Nome (Enter para manter): ")
-    if novo_nome:
-        produto["prod_nome"] = novo_nome
+    novo_nome = input("Novo Nome: ").strip()
+    nova_desc = input("Nova Descrição: ").strip()
+    novo_valor = input("Novo Valor: ").strip()
+    nova_qtd  = input("Nova Quantidade: ").strip()
+    novo_cnpj = input("Novo CNPJ do vendedor: ").strip()
 
-    nova_descricao = input("Nova Descrição (Enter para manter): ")
-    if nova_descricao:
-        produto["prod_descricao"] = nova_descricao
-
-    novo_valor = input("Novo Valor (Enter para manter): ")
+    changes = {}
+    if novo_nome: changes["prod_nome"] = novo_nome
+    if nova_desc: changes["prod_descricao"] = nova_desc
     if novo_valor:
-        produto["prod_valor"] = float(novo_valor)
+        try: changes["prod_valor"] = float(novo_valor)
+        except ValueError: print("Valor inválido. Mantido.")
+    if nova_qtd:
+        try: changes["prod_quantidade"] = int(nova_qtd)
+        except ValueError: print("Quantidade inválida. Mantida.")
 
-    nova_quantidade = input("Nova Quantidade (Enter para manter): ")
-    if nova_quantidade:
-        produto["prod_quantidade"] = int(nova_quantidade)
+    if novo_cnpj:
+        vendedor = col_vendedor.find_one({"ven_cnpj": novo_cnpj})
+        if vendedor:
+            changes["vendedor"] = {
+                "ven_id": str(vendedor.get("_id")),
+                "ven_nome": vendedor.get("ven_nome"),
+                "ven_cnpj": vendedor.get("ven_cnpj"),
+            }
+        else:
+            print("CNPJ não encontrado. Vendedor mantido.")
 
-    opcao = input("Deseja atualizar os dados do vendedor? (S/N): ").upper()
-    if opcao == "S":
-        novo_ven_id = input("Novo ID do vendedor (Enter para manter): ")
-        if novo_ven_id:
-            produto["vendedor"]["ven_id"] = int(novo_ven_id)
-        novo_ven_nome = input("Novo Nome do vendedor (Enter para manter): ")
-        if novo_ven_nome:
-            produto["vendedor"]["ven_nome"] = novo_ven_nome
-        novo_ven_numero = input("Novo Número do vendedor (Enter para manter): ")
-        if novo_ven_numero:
-            produto["vendedor"]["ven_numero"] = novo_ven_numero
+    if not changes:
+        print("Nada para atualizar.")
+        return
 
-    col_produto.update_one(myquery, {"$set": produto})
+    col_produto.update_one({"_id": produto["_id"]}, {"$set": changes})
     print("Produto atualizado com sucesso!")
 
 def delete_produto(prod_cod):

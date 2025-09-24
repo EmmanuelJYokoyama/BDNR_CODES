@@ -15,72 +15,62 @@ def create_favorito():
     usuario_col = db.usuario
     favorito_col = db.favorito
 
-    cpf_usuario = input("Digite o CPF do usuário: ")
-    id_produto = input("Digite o ID do produto: ")
+    cpf_usuario = input("Digite o CPF do usuário: ").strip()
+    codigo_str = input("Digite o código do produto: ").strip()
 
-    usuario = usuario_col.find_one({"cpf": cpf_usuario})
+    if not cpf_usuario or not codigo_str:
+        print("CPF e código do produto são obrigatórios.")
+        return
+    
+    prod_cod = int(codigo_str)
+
+    usuario = usuario_col.find_one({"usu_cpf": cpf_usuario})
     if not usuario:
         print("Usuário não encontrado.")
         return
-   
-    produto = produto_col.find_one({"id": id_produto})
+
+    produto = produto_col.find_one({"prod_cod": prod_cod})
     if not produto:
         print("Produto não encontrado.")
         return
-    
-    doc = {"id_produto": id_produto, "cpf_usuario": cpf_usuario }
-    favorito_col.insert_one(doc)
-    usuario_col.update_one(
-        {"cpf": cpf_usuario},
-        {"$push": {"favoritos": {
-            "id": id_produto
-        }}}
-    )
-    print(f"Favorito registrado com sucesso!")
 
-def read_favoritos_usuario(cpf):
+    # registra favorito (usu_cpf + prod_cod)
+    favorito_col.insert_one({"usu_cpf": cpf_usuario, "prod_cod": prod_cod})
+
+    # opcional: mantém referência no usuário
+    usuario_col.update_one(
+        {"usu_cpf": cpf_usuario},
+        {"$addToSet": {"favoritos": {"prod_cod": prod_cod}}}
+    )
+    print("Favorito registrado com sucesso!")
+
+def read_favoritos(cpf):
     usuario_col = db.usuario
     favorito_col = db.favorito
     produto_col = db.produto
 
-    usuario = usuario_col.find_one({"usu_cpf": cpf}) or usuario_col.find_one({"cpf": cpf})
+    usuario = usuario_col.find_one({"usu_cpf": cpf})
     if not usuario:
         print("Usuário não encontrado.")
         return
 
-    nome_usuario = usuario.get("usu_nome", usuario.get("nome", ""))
-    cpf_usuario = usuario.get("usu_cpf", usuario.get("cpf", cpf))
-    print(f"\nFavoritos do usuário")
-    print(f"Nome: {nome_usuario}")
-    print(f"CPF: {cpf_usuario}")
+    print("\nFavoritos do usuário")
+    print(f"Nome: {usuario.get('usu_nome', '')}")
+    print(f"CPF:  {usuario.get('usu_cpf', '')}")
 
-    favoritos = favorito_col.find({"cpf_usuario": cpf})
     encontrou = False
-    for fav in favoritos:
+    for fav in favorito_col.find({"usu_cpf": cpf}):
         encontrou = True
-        pid = fav.get("id_produto") or fav.get("prod_id") or fav.get("id")
-
-        produto = None
-        consultas = []
-        if pid is not None:
-            try:
-                consultas.append({"prod_id": int(pid)})
-            except:
-                pass
-            consultas += [{"prod_id": pid}, {"id": pid}]
-            for q in consultas:
-                produto = produto_col.find_one(q)
-                if produto:
-                    break
+        prod_cod = fav.get("prod_cod")
+        produto = produto_col.find_one({"prod_cod": prod_cod})
 
         print("-" * 30)
         if produto:
-            print(f"ID: {produto.get('prod_id', produto.get('id', ''))}")
-            print(f"Nome: {produto.get('prod_nome', produto.get('nome', ''))}")
-            print(f"Valor: {produto.get('prod_valor', produto.get('valor', ''))}")
-            print(f"Quantidade: {produto.get('prod_quantidade', produto.get('quantidade', ''))}")
+            print(f"Código: {produto.get('prod_cod', '')}")
+            print(f"Nome: {produto.get('prod_nome', '')}")
+            print(f"Valor: {produto.get('prod_valor', '')}\n")
         else:
-            print(f"Produto não encontrado (ID: {pid})")
+            print(f"Produto não encontrado (prod_cod: {prod_cod})")
 
     if not encontrou:
         print("Nenhum favorito encontrado.")
@@ -89,22 +79,26 @@ def delete_favorito(cpf):
     usuario_col = db.usuario
     favorito_col = db.favorito
 
-    usuario = usuario_col.find_one({"cpf": cpf})
+    usuario = usuario_col.find_one({"usu_cpf": cpf})
     if not usuario:
         print("Usuário não encontrado.")
         return
-    
-    id_produto = input("Digite o ID do produto a remover dos favoritos: ")
 
-    favorito = favorito_col.find_one({"cpf_usuario": cpf, "id_produto": id_produto})
+    codigo_str = input("Digite o CÓDIGO do produto (prod_cod) a remover: ").strip()
+    try:
+        prod_cod = int(codigo_str)
+    except ValueError:
+        print("Código do produto deve ser numérico.")
+        return
+
+    favorito = favorito_col.find_one({"usu_cpf": cpf, "prod_cod": prod_cod})
     if not favorito:
         print("Esse produto não está nos favoritos do usuário.")
         return
-    
-    favorito_col.delete_one({"cpf_usuario": cpf, "id_produto": id_produto})
 
+    favorito_col.delete_one({"usu_cpf": cpf, "prod_cod": prod_cod})
     usuario_col.update_one(
-        {"cpf": cpf},
-        {"$pull": {"favoritos": {"id": id_produto}}}
+        {"usu_cpf": cpf},
+        {"$pull": {"favoritos": {"prod_cod": prod_cod}}}
     )
-    print(f"Produto removido dos favoritos de {usuario['nome']}.")
+    print(f"Produto removido dos favoritos de {usuario.get('usu_nome','')}.")

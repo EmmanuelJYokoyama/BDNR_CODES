@@ -53,7 +53,6 @@ def read_usuario(cpf=None):
 
     filtro = {"usu_cpf": cpf} if cpf else {}
 
-
     encontrou = False
     for u in col.find(filtro).sort("usu_nome"):
         encontrou = True

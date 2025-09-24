@@ -4,7 +4,6 @@ from datetime import datetime
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
-# Create a new client and connect to the server
 client = MongoClient(uri, server_api=ServerApi('1'))
 global db
 db = client.mercado_livre
@@ -13,21 +12,17 @@ key = 0
 sub = 0
 
 def delete_compra(nome, sobrenome):
-    #Delete
-    global db
     mycol = db.compras
     myquery = {"usuario.usu_nome": nome, "usuario.usu_sobrenome": sobrenome}
     mydoc = mycol.delete_one(myquery)
     print("Deletado o usuário ",mydoc)
 
 def create_compra():
-    global db
     compras_col = db.compras    
     usuarios_col = db.usuario
     produtos_col = db.produto
     print("\nInserindo uma nova compra")
     cpf = input("Digite seu CPF: ")
-    # Busca o usuário na coleção usuario
     usuario = usuarios_col.find_one({"usu_cpf": cpf})
     if not usuario:
         print("CPF não cadastrado como usuário.")
@@ -52,37 +47,49 @@ def create_compra():
     prod = []
     key = 'S'
     while key == 'S':
-        produtoCod = input("Código do produto: ")
-        if not produtoCod:
+        codigo_str = input("Código do produto: ").strip()
+        if not codigo_str:
             print("Código do produto não pode ser vazio.")
             continue
+        try:
+            produtoCod = int(codigo_str)
+        except ValueError:
+            print("Código do produto deve ser numérico.")
+            continue
 
-        produto = produtos_col.find_one({"prod_id": int(produtoCod)})
+        produto = (produtos_col.find_one({"prod_cod": produtoCod})
+                   or produtos_col.find_one({"prod_id": produtoCod}))
         if not produto:
             print("Produto não encontrado! Informe um código válido.")
             continue
 
-        print(f"Produto encontrado: {produto['prod_nome']} - Valor: {produto['prod_valor']} - Quantidade disponível: {produto['prod_quantidade']}")
-        produtoQuantidade = int(input("Quantidade do produto: "))
-        if produtoQuantidade > produto['prod_quantidade']:
+        print(f"Produto: {produto.get('prod_nome')} - Valor: {produto.get('prod_valor')} - Quantidade disponível: {produto.get('prod_quantidade')}")
+        try:
+            produtoQuantidade = int(input("Quantidade do produto: "))
+        except ValueError:
+            print("Quantidade inválida.")
+            continue
+        if produtoQuantidade <= 0:
+            print("Quantidade deve ser maior que zero.")
+            continue
+        if produtoQuantidade > produto.get('prod_quantidade', 0):
             print("Quantidade solicitada maior que a disponível!")
             continue
 
-        valor += produto['prod_valor'] * produtoQuantidade
+        valor += float(produto.get('prod_valor', 0)) * produtoQuantidade
         produtosObj = {
-            "prod_id": produto['prod_id'],
-            "prod_nome": produto['prod_nome'],
-            "prod_valor": produto['prod_valor'],
+            "prod_id": produto.get("prod_id", produto.get("prod_cod")),
+            "prod_nome": produto.get("prod_nome"),
+            "prod_valor": produto.get("prod_valor"),
             "prod_quantidade": produtoQuantidade
         }
 
-        nova_quantidade = produto['prod_quantidade'] - produtoQuantidade
-        produtos_col.update_one(
-            {"prod_id": produto['prod_id']},
-            {"$set": {"prod_quantidade": nova_quantidade}}
-        )
+        filtro_update = {"prod_cod": produto["prod_cod"]} if "prod_cod" in produto else {"prod_id": produto.get("prod_id", produtoCod)}
+        nova_quantidade = produto.get('prod_quantidade', 0) - produtoQuantidade
+        produtos_col.update_one(filtro_update, {"$set": {"prod_quantidade": nova_quantidade}})
+
         prod.append(produtosObj)
-        key = input("Deseja cadastrar um novo produto (S/N)? ").upper()
+        key = input("Deseja cadastrar um novo produto (S/N)? ").strip().upper()
 
     compra_doc = {
         "comp_valor": valor,
@@ -100,17 +107,42 @@ def create_compra():
 
 def read_compra(cpf):
     compras_col = db.compras
-    compras = compras_col.find({"usuario.usu_cpf": cpf})
+    cursor = compras_col.find({"usuario.usu_cpf": cpf}).sort("comp_data")
+
     encontrou = False
-    for compra in compras:
-        print(compra)
+    for i, compra in enumerate(cursor, start=1):
         encontrou = True
+        u = compra.get("usuario", {}) or {}
+        print(f"\nCompra #{i}")
+        print(f"Nome: {u.get('usu_nome', '')}")
+        print(f"CPF: {u.get('usu_cpf', '')}")
+        print(f"Email: {u.get('usu_email', '')}")
+        print(f"Data da compra: {compra.get('comp_data', '')}")
+        entrega = compra.get("comp_dataentrega")
+        print(f"Data da entrega: {entrega if entrega else '(não entregue)'}")
+
+        total = compra.get("comp_valor", 0)
+        print(f"Valor total: R$ {total:.2f}" if isinstance(total, (int, float)) else f"Valor total: {total}")
+
+        itens = compra.get("produtos", [])
+        if itens:
+            print("Produtos:")
+            for p in itens:
+                nome = p.get("prod_nome", "")
+                qtd = p.get("prod_quantidade", 0)
+                val = p.get("prod_valor", 0)
+                val_str = f"R$ {val:.2f}" if isinstance(val, (int, float)) else str(val)
+                subtotal = val * qtd if isinstance(val, (int, float)) else None
+                sub_str = f" | Subtotal: R$ {subtotal:.2f}" if subtotal is not None else ""
+                print(f"  - Nome: {nome} | Qtd: {qtd} | Valor: {val_str}{sub_str}")
+        else:
+            print("Produtos: (nenhum)")
+        print("-" * 40)
+
     if not encontrou:
         print("Nenhuma compra encontrada para esse CPF.")
 
 def update_compra(nome):
-    #Read
-    global db
     mycol = db.compras
     myquery = {"usuario.usu_nome": nome}
     mydoc = mycol.find_one(myquery)

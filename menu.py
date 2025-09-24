@@ -4,17 +4,17 @@ from usuarioCrud import *
 from vendedorCrud import *
 from produtoCrud import *
 from compraCrud import *
-from favoritosCrud import *  # Adicione esta linha
+from favoritosCrud import * 
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
-# Create a new client and connect to the server
 client = MongoClient(uri, server_api=ServerApi('1'))
 db = client.mercado_livre
 
 key = 0
 sub = 0
 while (key != 'S'):
+    print("\n\tMenu Principal")
     print("1-CRUD Usuário")
     print("2-CRUD Vendedor")
     print("3-CRUD Produto")
@@ -33,13 +33,13 @@ while (key != 'S'):
             print("Create usuario")
             create_usuario()
         elif (sub == '2'):
-            nome = input("Read usuário, deseja algum nome especifico? ")
+            nome = input("Read usuário, digite seu cpf para consulta: ")
             read_usuario(nome)
         elif (sub == '3'):
-            nome = input("Update usuário, deseja algum nome especifico? ")
+            nome = input("Update usuário, digite o cpf do usuário a ser atualizado: ")
             update_usuario(nome)
         elif (sub == '4'):
-            print("delete usuario")
+            print("Delete usuario")
             nome = input("Nome a ser deletado: ")
             sobrenome = input("Sobrenome a ser deletado: ")
             delete_usuario(nome, sobrenome)
@@ -111,21 +111,17 @@ while (key != 'S'):
         print("\n\tMenu de Favorito")
         print("1-Create Favorito")
         print("2-Read Favorito")
-        print("3-Update Favorito")
-        print("4-Delete Favorito")
+        print("3-Delete Favorito")
         sub = input("Digite a opção desejada? (V para voltar) ").upper()
         if (sub == '1'):
             print("Create favorito")
             create_favorito()
         elif (sub == '2'):
-            nome = input("Read favorito, deseja algum nome especifico? ")
-            read_favorito(nome)
+            cpf = input("Read favorito, digite seu cpf para consulta: ")
+            read_favoritos(cpf)
         elif (sub == '3'):
-            nome = input("Update favorito, deseja algum nome especifico? ")
-            update_favorito(nome)
-        elif (sub == '4'):
-            print("delete favorito")
+            print("Delete favorito")
             nome = input("Nome do favorito a ser deletado: ")
             delete_favorito(nome)
 
-print("Tchau Prof...")
+print("ATÉ LOGO!")
