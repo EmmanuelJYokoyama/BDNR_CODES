@@ -76,7 +76,7 @@ while (key != 'S'):
             print("Create produto")
             create_produto()
         elif (sub == '2'):
-            nome = input("Read produto, deseja algum nome especifico? ")
+            nome = input("Read produto, deseja algum codigo especifico? ")
             read_produto(nome)
         elif (sub == '3'):
             nome = int(input("Update produto, deseja algum ID especifico? "))
