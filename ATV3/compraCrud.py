@@ -1,98 +1,117 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from datetime import datetime
+import redis
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-
 client = MongoClient(uri, server_api=ServerApi('1'))
-global db
 db = client.mercado_livre
 
-key = 0
-sub = 0
+# Conexão local para uso isolado (o menu passa 'r' para create_compra)
+r_local = redis.Redis(
+    host='redis-15823.crce216.sa-east-1-2.ec2.redns.redis-cloud.com',
+    port=15823,
+    decode_responses=True,
+    username="admin",
+    password="Admin1!admin",
+)
 
 def delete_compra(nome, sobrenome):
     mycol = db.compras
     myquery = {"usuario.usu_nome": nome, "usuario.usu_sobrenome": sobrenome}
     mydoc = mycol.delete_one(myquery)
-    print("Deletado o usuário ",mydoc)
+    print("Deletado o usuário ", mydoc)
 
-def create_compra():
-    compras_col = db.compras    
+def create_compra(db, r=None):
+    # se não veio conexão do menu, usa local
+    r = r or r_local
+
+    compras_col = db.compras
     usuarios_col = db.usuario
     produtos_col = db.produto
+
     print("\nInserindo uma nova compra")
-    cpf = input("Digite seu CPF: ")
+    cpf = input("Digite seu CPF: ").strip()
     usuario = usuarios_col.find_one({"usu_cpf": cpf})
     if not usuario:
         print("CPF não cadastrado como usuário.")
         return
 
-    dataCompra = input("Data da compra (DD-MM-YYYY): ")
-    try:
-        data_compra_dt = datetime.strptime(dataCompra, "%d-%m-%Y")
-    except ValueError:
-        print("Data de compra inválida. Use o formato DD-MM-YYYY.")
-        return
-
-    dataEntrega = input("Data da entrega (DD-MM-YYYY, deixe vazio se não entregue): ")
-    if dataEntrega.strip():
-        data_entrega_dt = datetime.strptime(dataEntrega, "%d-%m-%Y")
-        while data_entrega_dt < data_compra_dt:
-            dataEntrega = input("Data de entrega não pode ser antes da data de compra. Insira a data novamente: ")
-    else:
-        dataEntrega = None
-
-    valor = 0
-    prod = []
-    key = 'S'
-    while key == 'S':
-        codigo_str = input("Código do produto: ").strip()
-        if not codigo_str:
-            print("Código do produto não pode ser vazio.")
-            continue
+    while True:
+        dataCompra = input("Data da compra (DD-MM-YYYY): ").strip()
         try:
-            produtoCod = int(codigo_str)
+            data_compra_dt = datetime.strptime(dataCompra, "%d-%m-%Y")
+            break
         except ValueError:
-            print("Código do produto deve ser numérico.")
-            continue
+            print("Data de compra inválida. Use o formato DD-MM-YYYY.")
 
-        produto = (produtos_col.find_one({"prod_cod": produtoCod})
-                   or produtos_col.find_one({"prod_id": produtoCod}))
-        if not produto:
-            print("Produto não encontrado! Informe um código válido.")
-            continue
-
-        print(f"Produto: {produto.get('prod_nome')} - Valor: {produto.get('prod_valor')} - Quantidade disponível: {produto.get('prod_quantidade')}")
+    dataEntrega = None
+    raw = input("Data da entrega (DD-MM-YYYY, vazio se não entregue): ").strip()
+    if raw:
         try:
-            produtoQuantidade = int(input("Quantidade do produto: "))
+            data_entrega_dt = datetime.strptime(raw, "%d-%m-%Y")
+            if data_entrega_dt < data_compra_dt:
+                print("Data de entrega não pode ser antes da data de compra.")
+                return
+            dataEntrega = raw
+        except ValueError:
+            print("Data de entrega inválida. Use o formato DD-MM-YYYY.")
+            return
+
+    valor_total = 0.0
+    itens = []
+    add = 'S'
+    while add == 'S':
+        cod_input = input("Código do produto (prod_cod): ").strip()
+        try:
+            cod = int(cod_input)
+        except ValueError:
+            print("Código inválido.")
+            continue
+
+        produto = produtos_col.find_one({"prod_cod": cod})
+        if not produto:
+            print("Produto não encontrado.")
+            continue
+
+        print(f"Produto: {produto['prod_nome']} | Valor: {produto['prod_valor']} | Estoque: {produto['prod_quantidade']}")
+        try:
+            qtd = int(input("Quantidade: ").strip())
         except ValueError:
             print("Quantidade inválida.")
             continue
-        if produtoQuantidade <= 0:
-            print("Quantidade deve ser maior que zero.")
-            continue
-        if produtoQuantidade > produto.get('prod_quantidade', 0):
-            print("Quantidade solicitada maior que a disponível!")
+        if qtd <= 0:
+            print("Quantidade deve ser > 0.")
             continue
 
-        valor += float(produto.get('prod_valor', 0)) * produtoQuantidade
-        produtosObj = {
-            "prod_id": produto.get("prod_id", produto.get("prod_cod")),
-            "prod_nome": produto.get("prod_nome"),
-            "prod_valor": produto.get("prod_valor"),
-            "prod_quantidade": produtoQuantidade
-        }
+        upd = produtos_col.update_one(
+            {"prod_cod": cod, "prod_quantidade": {"$gte": qtd}},
+            {"$inc": {"prod_quantidade": -qtd}}
+        )
+        if upd.modified_count == 0:
+            print("Estoque insuficiente no momento.")
+            continue
 
-        filtro_update = {"prod_cod": produto["prod_cod"]} if "prod_cod" in produto else {"prod_id": produto.get("prod_id", produtoCod)}
-        nova_quantidade = produto.get('prod_quantidade', 0) - produtoQuantidade
-        produtos_col.update_one(filtro_update, {"$set": {"prod_quantidade": nova_quantidade}})
+        # lê do Mongo o novo estoque e reflete no Redis
+        novo_doc = produtos_col.find_one({"prod_cod": cod}, {"prod_quantidade": 1})
+        if novo_doc:
+            r.hset(f"produto:{cod}", mapping={"prod_quantidade": int(novo_doc["prod_quantidade"])})
 
-        prod.append(produtosObj)
-        key = input("Deseja cadastrar um novo produto (S/N)? ").strip().upper()
+        itens.append({
+            "prod_cod": produto["prod_cod"],
+            "prod_nome": produto["prod_nome"],
+            "prod_valor": produto["prod_valor"],
+            "prod_quantidade": qtd
+        })
+        valor_total += produto["prod_valor"] * qtd
+        add = input("Adicionar outro produto? (S/N): ").upper()
+
+    if not itens:
+        print("Compra vazia. Cancelada.")
+        return
 
     compra_doc = {
-        "comp_valor": valor,
+        "comp_valor": round(valor_total, 2),
         "comp_data": dataCompra,
         "comp_dataentrega": dataEntrega,
         "usuario": {
@@ -100,10 +119,10 @@ def create_compra():
             "usu_nome": usuario.get("usu_nome"),
             "usu_email": usuario.get("usu_email")
         },
-        "produtos": prod
+        "produtos": itens
     }
     x = compras_col.insert_one(compra_doc)
-    print("Documento inserido com ID ",x.inserted_id)
+    print("Compra registrada com ID", x.inserted_id)
 
 def read_compra(cpf):
     compras_col = db.compras

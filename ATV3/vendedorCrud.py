@@ -1,80 +1,101 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+import redis
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-
 client = MongoClient(uri, server_api=ServerApi('1'))
-global db
 db = client.mercado_livre
 
-key = 0
-sub = 0
+r = redis.Redis(
+    host='redis-15823.crce216.sa-east-1-2.ec2.redns.redis-cloud.com',
+    port=15823,
+    decode_responses=True,
+    username="admin",
+    password="Admin1!admin",
+)
 
-def delete_vendedor(nome, cnpj):
-    global db
-    mycol = db.vendedor
-    myquery = {"ven_nome": nome, "ven_cnpj": cnpj}
-    mydoc = mycol.delete_one(myquery)
-    print("\nDeletado o vendedor ",mydoc)
+def _cache_vendedor(doc):
+    if not doc: 
+        return
+    key = f"vendedor:{doc['ven_cnpj']}"
+    r.hset(key, mapping={
+        "ven_nome": doc.get("ven_nome", ""),
+        "ven_cnpj": doc.get("ven_cnpj", ""),
+        "ven_email": doc.get("ven_email", ""),
+    })
 
 def create_vendedor():
-    global db
     col_vendedor = db.vendedor
-    col_produto = db.produtos
     print("\n\n\tInserindo um novo vendedor")
     nome = input("Nome: ")
     sobrenome = input("Sobrenome: ")
     email = input("Email: ")
     nomeFormat = f"{nome} {sobrenome}"
     cnpj = input("CNPJ: ")
-    valor = 0  
-    mydoc = {
+
+    doc = {
         "ven_nome": nomeFormat,
         "ven_cnpj": cnpj,
         "ven_email": email,
         "produtos": [],
-        "ven_valor_total": valor
+        "ven_valor_total": 0
     }
-    x = col_vendedor.insert_one(mydoc)
-    print("Documento inserido!")
+    col_vendedor.create_index("ven_cnpj", unique=True)
+    x = col_vendedor.insert_one(doc)
+    _cache_vendedor(doc)
+    print("Vendedor inserido com ID", x.inserted_id)
 
 def read_vendedor(cnpj=None):
-    global db
     col = db.vendedor
-    filtro = {"ven_cnpj": cnpj} if cnpj else {}
 
+    if cnpj:
+        # cache-first
+        hv = r.hgetall(f"vendedor:{cnpj}")
+        if hv:
+            print(f"\nNome: {hv.get('ven_nome','')}\nCNPJ: {hv.get('ven_cnpj','')}\nEmail: {hv.get('ven_email','')}\n" + "-"*30)
+            return
+        v = col.find_one({"ven_cnpj": cnpj})
+        if v:
+            _cache_vendedor(v)
+            print(f"\nNome: {v.get('ven_nome', '')}\nCNPJ: {v.get('ven_cnpj', '')}\nEmail: {v.get('ven_email', '')}\n" + "-"*30)
+        else:
+            print("Nenhum vendedor encontrado.")
+        return
+
+    # lista todos pelo Mongo e aquece o cache
     encontrou = False
-    for v in col.find(filtro):
+    for v in col.find({}).sort("ven_nome"):
         encontrou = True
+        _cache_vendedor(v)
         print(f"\nNome: {v.get('ven_nome', '')}")
         print(f"CNPJ: {v.get('ven_cnpj', '')}")
         print(f"Email: {v.get('ven_email', '')}")
-        print(f"Valor total: {v.get('ven_valor_total', 0)}")
-        produtos = v.get("produtos", [])
-        if produtos:
-            print("Produtos:")
-            for p in produtos:
-                print(f"  - ID: {p.get('prod_id', '')} | Nome: {p.get('prod_nome', '')} | Valor: {p.get('prod_valor', '')} | Quantidade: {p.get('prod_quantidade', '')}")
-        else:
-            print("Produtos: (nenhum)")
         print("-" * 30)
-
     if not encontrou:
         print("Nenhum vendedor encontrado.")
 
 def update_vendedor(cnpj):
-    global db
-    mycol = db.usuario
-    myquery = {"ven_cnpj": cnpj}
-    mydoc = mycol.find_one(myquery)
-    print("Dados do usuário: ",mydoc)
-    nome = input("Mudar Nome:")
-    if len(nome): 
-        mydoc["ven_nome"] = nome
+    col = db.vendedor
+    doc = col.find_one({"ven_cnpj": cnpj})
+    if not doc:
+        print("Vendedor não encontrado.")
+        return
 
-    email = input("Mudar Email:")
-    if len(email):
-        mydoc["ven_email"] = email
+    print("Atual:", doc)
+    v = input("Novo nome (Enter mantém): ").strip()
+    if v: doc["ven_nome"] = v
+    v = input("Novo email (Enter mantém): ").strip()
+    if v: doc["ven_email"] = v
 
-    newvalues = { "$set": mydoc }
-    mycol.update_one(myquery, newvalues)
+    col.update_one({"ven_cnpj": cnpj}, {"$set": doc})
+    _cache_vendedor(doc)
+    print("Vendedor atualizado.")
+
+def delete_vendedor(cnpj):
+    col = db.vendedor
+    res = col.delete_one({"ven_cnpj": cnpj})
+    if res.deleted_count:
+        r.delete(f"vendedor:{cnpj}")
+        print("Vendedor deletado com sucesso!")
+    else:
+        print("Nenhum vendedor encontrado com esse CNPJ.")
