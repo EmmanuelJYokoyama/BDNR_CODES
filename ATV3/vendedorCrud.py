@@ -99,3 +99,35 @@ def delete_vendedor(cnpj):
         print("Vendedor deletado com sucesso!")
     else:
         print("Nenhum vendedor encontrado com esse CNPJ.")
+
+def manipular_vendedores(db, cache):
+    vendedor_col = db.vendedor
+    vendedores = list(vendedor_col.find().limit(1))
+    if not vendedores:
+        print("Nenhum vendedor encontrado.")
+        return
+
+    print("Vendedores encontrados:")
+    for vendedor in vendedores:
+        print({"ven_cnpj": vendedor.get("ven_cnpj"), "ven_nome": vendedor.get("ven_nome")})
+
+    # a) -> Redis
+    for vendedor in vendedores:
+        chave = f"vendedor:{vendedor['ven_cnpj']}"
+        cache.hset(chave, mapping={"cnpj": vendedor["ven_cnpj"], "nome": vendedor.get("ven_nome", "")})
+
+    print("\nAlterando nome do vendedor no Redis...")
+    for vendedor in vendedores:
+        chave = f"vendedor:{vendedor['ven_cnpj']}"
+        novo_nome = input("Digite o novo nome: ").strip()
+        if novo_nome:
+            cache.hset(chave, "nome", novo_nome)
+            print(f"Nome do vendedor alterado para {novo_nome}")
+
+    print("\nGravando de volta no MongoDB...")
+    for vendedor in vendedores:
+        chave = f"vendedor:{vendedor['ven_cnpj']}"
+        dados = cache.hgetall(chave)
+        vendedor_col.update_one({"ven_cnpj": vendedor["ven_cnpj"]}, {"$set": {"ven_nome": dados.get("nome", "")}})
+
+    print("Vendedores manipulados com sucesso!\n")

@@ -66,28 +66,74 @@ def create_produto():
 
 def read_produto(cod=None):
     col_produto = db.produto
-    if not cod:
-        for x in col_produto.find().sort("prod_nome", 1):
-            _cache_produto(x)
-            print(x)
+
+    # Lista todos quando vazio/None
+    if cod is None or (isinstance(cod, str) and cod.strip() == ""):
+        encontrou = False
+        for doc in col_produto.find().sort("prod_nome", 1):
+            encontrou = True
+            _cache_produto(doc)  # mantém cache atualizado
+            vend = (doc.get("vendedor") or {})
+            valor = doc.get("prod_valor", 0)
+            try:
+                valor_fmt = f"R$ {float(valor):.2f}"
+            except Exception:
+                valor_fmt = str(valor)
+
+            print(f"\nCódigo: {doc.get('prod_cod', '')}")
+            print(f"Nome: {doc.get('prod_nome', '')}")
+            print(f"Descrição: {doc.get('prod_descricao', '')}")
+            print(f"Valor: {valor_fmt}")
+            print(f"Quantidade: {doc.get('prod_quantidade', 0)}")
+            if vend.get("ven_nome") or vend.get("ven_numero"):
+                print(f"Vendedor: {vend.get('ven_nome', '')} | CNPJ: {vend.get('ven_numero', '')}")
+            print("-" * 40)
+
+        if not encontrou:
+            print("Nenhum produto encontrado.")
         return
+
     try:
-        cod_int = int(cod)
+        cod_int = int(str(cod).strip())
     except ValueError:
         print("Código inválido.")
         return
 
-    # cache-first
     hk = f"produto:{cod_int}"
     hv = r.hgetall(hk)
     if hv:
-        print(hv)
+        try:
+            valor_fmt = f"R$ {float(hv.get('prod_valor', 0)):.2f}"
+        except Exception:
+            valor_fmt = str(hv.get("prod_valor", ""))
+        print(f"\nCódigo: {hv.get('prod_cod', '')}")
+        print(f"Nome: {hv.get('prod_nome', '')}")
+        print(f"Descrição: {hv.get('prod_descricao', '')}")
+        print(f"Valor: {valor_fmt}")
+        print(f"Quantidade: {hv.get('prod_quantidade', 0)}")
+        if hv.get("ven_nome") or hv.get("ven_numero"):
+            print(f"Vendedor: {hv.get('ven_nome', '')} | CNPJ: {hv.get('ven_numero', '')}")
+        print("-" * 40)
         return
 
     doc = col_produto.find_one({"prod_cod": cod_int})
     if doc:
         _cache_produto(doc)
-        print(doc)
+        vend = (doc.get("vendedor") or {})
+        valor = doc.get("prod_valor", 0)
+        try:
+            valor_fmt = f"R$ {float(valor):.2f}"
+        except Exception:
+            valor_fmt = str(valor)
+
+        print(f"\nCódigo: {doc.get('prod_cod', '')}")
+        print(f"Nome: {doc.get('prod_nome', '')}")
+        print(f"Descrição: {doc.get('prod_descricao', '')}")
+        print(f"Valor: {valor_fmt}")
+        print(f"Quantidade: {doc.get('prod_quantidade', 0)}")
+        if vend.get("ven_nome") or vend.get("ven_numero"):
+            print(f"Vendedor: {vend.get('ven_nome', '')} | CNPJ: {vend.get('ven_numero', '')}")
+        print("-" * 40)
     else:
         print("Nenhum produto encontrado com esse código.")
 
@@ -147,4 +193,51 @@ def delete_produto(prod_cod):
         print("Produto deletado com sucesso!")
     else:
         print("Nenhum produto encontrado com esse código.")
+
+def manipular_produtos(db, cache):
+    produto_col = db.produto
+    # 3 itens como pede o PDF
+    produtos = list(produto_col.find().limit(3))
+    if not produtos:
+        print("Nenhum produto encontrado.")
+        return
+
+    print("Produtos encontrados:")
+    for produto in produtos:
+        print(produto)
+
+    for produto in produtos:
+        chave = f"produto:{produto['prod_cod']}"
+        dados = {
+            "prod_cod": str(produto.get("prod_cod")),
+            "nome": produto.get("prod_nome", ""),
+            "valor": str(produto.get("prod_valor", 0)),
+            "quantidade": str(produto.get("prod_quantidade", 0)),
+        }
+        cache.hset(chave, mapping=dados)
+
+    print("\nAumentando valor dos produtos em 10% no Redis...")
+    for produto in produtos:
+        chave = f"produto:{produto['prod_cod']}"
+        valor_str = cache.hget(chave, "valor") or "0"
+        try:
+            valor = float(valor_str)
+        except ValueError:
+            valor = 0.0
+        novo_valor = round(valor * 1.10, 2)
+        cache.hset(chave, "valor", str(novo_valor))
+        print(f"Valor do produto {produto.get('prod_nome')} alterado para R${novo_valor}")
+
+    print("\nGravando de volta os produtos no MongoDB...")
+    for produto in produtos:
+        chave = f"produto:{produto['prod_cod']}"
+        dados = cache.hgetall(chave)  # strings
+        set_doc = {
+            "prod_nome": dados.get("nome", ""),
+            "prod_valor": float(dados.get("valor", "0") or "0"),
+            "prod_quantidade": int(float(dados.get("quantidade", "0") or "0")),
+        }
+        produto_col.update_one({"prod_cod": produto["prod_cod"]}, {"$set": set_doc})
+
+    print("Produtos manipulados com sucesso!\n")
 
