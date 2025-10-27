@@ -49,7 +49,6 @@ def read_vendedor(cnpj=None):
     col = db.vendedor
 
     if cnpj:
-        # cache-first
         hv = r.hgetall(f"vendedor:{cnpj}")
         if hv:
             print(f"\nNome: {hv.get('ven_nome','')}\nCNPJ: {hv.get('ven_cnpj','')}\nEmail: {hv.get('ven_email','')}\n" + "-"*30)
@@ -62,7 +61,6 @@ def read_vendedor(cnpj=None):
             print("Nenhum vendedor encontrado.")
         return
 
-    # lista todos pelo Mongo e aquece o cache
     encontrou = False
     for v in col.find({}).sort("ven_nome"):
         encontrou = True
@@ -111,7 +109,7 @@ def manipular_vendedores(db, cache):
     for vendedor in vendedores:
         print({"ven_cnpj": vendedor.get("ven_cnpj"), "ven_nome": vendedor.get("ven_nome")})
 
-    # a) -> Redis
+
     for vendedor in vendedores:
         chave = f"vendedor:{vendedor['ven_cnpj']}"
         cache.hset(chave, mapping={"cnpj": vendedor["ven_cnpj"], "nome": vendedor.get("ven_nome", "")})

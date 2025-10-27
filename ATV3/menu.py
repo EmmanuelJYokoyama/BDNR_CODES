@@ -7,7 +7,7 @@ from produtoCrud import *
 from compraCrud import *
 from sync_utils import sync_mongo_to_redis, sync_redis_to_mongo
 from favoritosCrud import *
-from auth_simple import cadastrar_usuario, login_usuario, verificar_login, logout, renovar_sessao, ttl_restante  # <- TTL via Redis
+from login import cadastrar_usuario, login_usuario, verificar_login, logout, renovar_sessao, ttl_restante  # <- TTL via Redis
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
@@ -22,7 +22,6 @@ r = redis.Redis(
 client = MongoClient(uri, server_api=ServerApi('1'))
 db = client.mercado_livre
 
-# --- fluxo de login inicial e re-login quando necessário ---
 def fluxo_login(db, cache):
     while True:
         print("\nLogin")
@@ -40,12 +39,10 @@ def fluxo_login(db, cache):
         else:
             print("Opção inválida!")
 
-# Primeiro: exige login
 if not fluxo_login(db, r):
     print("ATÉ LOGO!")
 else:
     while True:
-        # Valida e renova TTL sempre que volta ao menu
         if not verificar_login(r, renew=True):
             if not fluxo_login(db, r):
                 print("ATÉ LOGO!")
@@ -171,9 +168,7 @@ else:
             if not fluxo_login(db, r):
                 print("ATÉ LOGO!")
                 break
-            # ao voltar do login, TTL já foi criado no Redis
 
-        # renova TTL ao final do ciclo
         renovar_sessao(r)
 
 print("ATÉ LOGO!")

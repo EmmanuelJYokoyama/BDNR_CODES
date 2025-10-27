@@ -1,7 +1,6 @@
 import json
 
 def sync_mongo_to_redis(db, r):
-    # Vendedores
     for v in db.vendedor.find({}):
         r.hset(f"vendedor:{v['ven_cnpj']}", mapping={
             "ven_nome": v.get("ven_nome",""),
@@ -36,7 +35,6 @@ def _float_or(s, default=0.0):
         return default
 
 def sync_redis_to_mongo(db, r):
-    # Vendedores
     for key in r.scan_iter(match="vendedor:*"):
         hv = r.hgetall(key)
         if not hv: 
@@ -51,7 +49,6 @@ def sync_redis_to_mongo(db, r):
             upsert=True
         )
 
-    # Produtos
     for key in r.scan_iter(match="produto:*"):
         hp = r.hgetall(key)
         if not hp:
