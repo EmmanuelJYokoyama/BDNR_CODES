@@ -1,6 +1,7 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import redis
+from sync_utils import sync_redis_to_mongo  # novo import
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 client = MongoClient(uri, server_api=ServerApi('1'))
@@ -240,4 +241,110 @@ def manipular_produtos(db, cache):
         produto_col.update_one({"prod_cod": produto["prod_cod"]}, {"$set": set_doc})
 
     print("Produtos manipulados com sucesso!\n")
+
+def cache_create_produto(r):
+    """
+    Cria/atualiza um produto no Redis (cache) e em seguida sincroniza para o Mongo.
+    Recebe a conexão redis 'r' (pode ser o r do menu).
+    """
+    try:
+        prod_cod = int(input("Código (prod_cod) do produto (cache): "))
+    except ValueError:
+        print("Código inválido.")
+        return
+
+    prod_nome = input("Nome do produto: ")
+    prod_descricao = input("Descrição do produto: ")
+    try:
+        prod_valor = float(input("Valor do produto: "))
+    except ValueError:
+        prod_valor = 0.0
+    try:
+        prod_quantidade = int(input("Quantidade em estoque: "))
+    except ValueError:
+        prod_quantidade = 0
+
+    # vendedor opcional (apenas referencia)
+    ven_cnpj = input("CNPJ do vendedor (opcional): ").strip()
+
+    key = f"produto:{prod_cod}"
+    mapping = {
+        "prod_cod": prod_cod,
+        "prod_nome": prod_nome,
+        "prod_descricao": prod_descricao,
+        "prod_valor": prod_valor,
+        "prod_quantidade": prod_quantidade,
+        "ven_numero": ven_cnpj,
+    }
+    r.hset(key, mapping=mapping)
+    print(f"Produto gravado no Redis em {key}.")
+
+    # sincroniza imediatamente para o Mongo
+    sync_redis_to_mongo(db, r)
+    print("Sincronizado para o Mongo.")
+
+def cache_update_produto(r):
+    """
+    Atualiza campos do produto no Redis e sincroniza.
+    """
+    cod = input("Código (prod_cod) do produto a atualizar no cache: ").strip()
+    try:
+        cod_int = int(cod)
+    except ValueError:
+        print("Código inválido.")
+        return
+
+    key = f"produto:{cod_int}"
+    current = r.hgetall(key)
+    if not current:
+        print("Produto não encontrado no cache (Redis).")
+        return
+
+    print("Dados atuais (cache):", current)
+    v = input("Novo nome (Enter mantém): ").strip()
+    if v: current["prod_nome"] = v
+    v = input("Nova descrição (Enter mantém): ").strip()
+    if v: current["prod_descricao"] = v
+    v = input("Novo valor (Enter mantém): ").strip()
+    if v:
+        try:
+            current["prod_valor"] = float(v)
+        except ValueError:
+            print("Valor inválido; mantendo antigo.")
+    v = input("Nova quantidade (Enter mantém): ").strip()
+    if v:
+        try:
+            current["prod_quantidade"] = int(v)
+        except ValueError:
+            print("Quantidade inválida; mantendo antiga.")
+    v = input("Novo CNPJ vendedor (Enter mantém): ").strip()
+    if v: current["ven_numero"] = v
+
+    # grava de volta no redis
+    r.hset(key, mapping=current)
+    print("Cache atualizado no Redis.")
+
+    # sincroniza
+    sync_redis_to_mongo(db, r)
+    print("Sincronizado para o Mongo.")
+
+def cache_delete_produto(r):
+    """
+    Deleta produto do Redis (cache) e sincroniza para remover do Mongo.
+    """
+    cod = input("Código (prod_cod) do produto a deletar no cache: ").strip()
+    try:
+        cod_int = int(cod)
+    except ValueError:
+        print("Código inválido.")
+        return
+    key = f"produto:{cod_int}"
+    if r.exists(key):
+        r.delete(key)
+        print("Produto removido do Redis (cache).")
+        # sincroniza (redis->mongo) para aplicar remoção no Mongo também
+        sync_redis_to_mongo(db, r)
+        print("Sincronização aplicada no Mongo.")
+    else:
+        print("Chave não encontrada no Redis.")
 

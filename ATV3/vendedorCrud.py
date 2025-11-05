@@ -1,6 +1,7 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import redis
+from sync_utils import sync_redis_to_mongo  # novo import
 
 uri = "mongodb+srv://admin:admin@cluster0.2ixrw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 client = MongoClient(uri, server_api=ServerApi('1'))
@@ -129,3 +130,49 @@ def manipular_vendedores(db, cache):
         vendedor_col.update_one({"ven_cnpj": vendedor["ven_cnpj"]}, {"$set": {"ven_nome": dados.get("nome", "")}})
 
     print("Vendedores manipulados com sucesso!\n")
+
+def cache_create_vendedor(r):
+    ven_cnpj = input("CNPJ do vendedor (cache): ").strip()
+    ven_nome = input("Nome do vendedor: ").strip()
+    ven_email = input("Email do vendedor: ").strip()
+
+    key = f"vendedor:{ven_cnpj}"
+    r.hset(key, mapping={
+        "ven_cnpj": ven_cnpj,
+        "ven_nome": ven_nome,
+        "ven_email": ven_email
+    })
+    print(f"Vendedor gravado no Redis em {key}.")
+
+    sync_redis_to_mongo(db, r)
+    print("Sincronizado para o Mongo.")
+
+def cache_update_vendedor(r):
+    ven_cnpj = input("CNPJ do vendedor a atualizar (cache): ").strip()
+    key = f"vendedor:{ven_cnpj}"
+    cur = r.hgetall(key)
+    if not cur:
+        print("Vendedor não encontrado no cache.")
+        return
+
+    print("Atual (cache):", cur)
+    v = input("Novo nome (Enter mantém): ").strip()
+    if v: cur["ven_nome"] = v
+    v = input("Novo email (Enter mantém): ").strip()
+    if v: cur["ven_email"] = v
+
+    r.hset(key, mapping=cur)
+    print("Cache atualizado.")
+    sync_redis_to_mongo(db, r)
+    print("Sincronizado para o Mongo.")
+
+def cache_delete_vendedor(r):
+    ven_cnpj = input("CNPJ do vendedor a deletar (cache): ").strip()
+    key = f"vendedor:{ven_cnpj}"
+    if r.exists(key):
+        r.delete(key)
+        print("Vendedor removido do Redis (cache).")
+        sync_redis_to_mongo(db, r)
+        print("Sincronizado para o Mongo.")
+    else:
+        print("Chave não encontrada no Redis.")

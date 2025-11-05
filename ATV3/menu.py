@@ -53,6 +53,7 @@ else:
         print("1-CRUD Usuário")
         print("2-CRUD Vendedor")
         print("3-CRUD Produto")
+        print("3a-Cache (Redis) -> Sync Produto")   # nova opção rápida
         print("4-CRUD Compra")
         print("5-CRUD Favorito")
         print("6-Sync Mongo -> Redis")
@@ -103,6 +104,25 @@ else:
                 delete_vendedor(cnpj)
 
         elif (key == '3'):
+            # opcional: sub-opção para manipular cache diretamente
+            sub = input("Opções: 1-Menu Produto, 2-Cache->Sync (C). Digite 1 ou C: ").strip().upper()
+            if sub == 'C' or sub == '2':
+                print("Cache Produto - opções")
+                print("1 - Create (cache)")
+                print("2 - Update (cache)")
+                print("3 - Delete (cache)")
+                op = input("Escolha: ").strip()
+                if op == '1':
+                    cache_create_produto(r)
+                elif op == '2':
+                    cache_update_produto(r)
+                elif op == '3':
+                    cache_delete_produto(r)
+                else:
+                    print("Opção inválida.")
+                continue
+
+            # caso padrão volta ao menu produto original
             print("\n\tMenu do Produto")
             print("1-Create Produto")
             print("2-Read Produto")

@@ -121,7 +121,7 @@ while (key != 'S'):
             read_favoritos(cpf)
         elif (sub == '3'):
             print("Delete favorito")
-            nome = input("Nome do favorito a ser deletado: ")
-            delete_favorito(nome)
+            codigo = input("Codigo do favorito a ser deletado: ")
+            delete_favorito(codigo)
 
 print("ATÉ LOGO!")
