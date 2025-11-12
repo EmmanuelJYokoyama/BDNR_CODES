@@ -121,7 +121,8 @@ while (key != 'S'):
             read_favoritos(cpf)
         elif (sub == '3'):
             print("Delete favorito")
-            codigo = input("Codigo do favorito a ser deletado: ")
-            delete_favorito(codigo)
+            cpf = input("CPF do usuário: ")
+            cod = input("Código do produto (prod_cod): ")
+            delete_favorito(cpf, cod)
 
 print("ATÉ LOGO!")
