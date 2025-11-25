@@ -10,7 +10,7 @@ def inserir_compra(session):
     execucao = True
 
     buscar_usuarios(session)
-    id_cliente = input(str("Digite o id do cliente que irá realizar a compra: "))
+    id_cliente = input(uuid("Digite o id do cliente que irá realizar a compra: "))
     resultado_busca_cliente = session.execute(f"select * from usuarios where id ='{id_cliente}'")
 
     if resultado_busca_cliente:
@@ -18,7 +18,7 @@ def inserir_compra(session):
         while execucao:
 
             buscar_produtos(session)
-            id_produto = input(str("Digite o id do produto que deseja comprar: "))
+            id_produto = input(uuid("Digite o id do produto que deseja comprar: "))
             resultado_busca_produto = session.execute(f"select * from produtos where id = '{id_produto}'")
             data_compra = dataAtual.strftime('%d/%m/%Y')
 

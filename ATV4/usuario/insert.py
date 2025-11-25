@@ -13,11 +13,11 @@ def inserir_usuario(session):
     endereco = input(str('Digite o endereço: '))
     
     session.execute("""
-                    insert into usuarios 
+                    INSERT INTO usuarios.usuarios 
                         (id,nome,email,cpf,rg,data_nascimento,telefone,endereco)
-                    values
+                    VALUES
                         (%s,%s,%s,%s,%s,%s,%s,%s)
-                    """, (str(uuid.uuid1()),nome, email, cpf, rg, data_nascimento, telefone, endereco)
+                    """, (uuid.uuid1(), nome, email, cpf, rg, data_nascimento, telefone, endereco)
                     )
 
     print('\nUsuario cadastrado com sucesso.')

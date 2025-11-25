@@ -1,4 +1,4 @@
-from vendedor.select import buscar_vendedores, buscar_vendedor_id
+from vendedor.select import buscar_vendedores, buscar_vendedor_cnpj
 from vendedor.insert import insert_vendedor
 from vendedor.update import atualizar_vendedor
 from vendedor.deletar import excluir_vendedor
@@ -11,7 +11,7 @@ def menu_vendedor(session):
         print('''
 Opções:
 [1] Buscar todos os vendedores
-[2] Buscar um vendedor por id
+[2] Buscar um vendedor por cpf
 [3] Cadastrar um novo vendedor
 [4] Atualizar informações de um vendedor
 [5] Excluir um vendedor
@@ -24,7 +24,7 @@ Opções:
             case 1:
                 buscar_vendedores(session)
             case 2:
-                buscar_vendedor_id(session)
+                buscar_vendedor_cnpj(session)
             case 3:
                 insert_vendedor(session)
             case 4:

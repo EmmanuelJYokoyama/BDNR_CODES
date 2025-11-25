@@ -1,4 +1,4 @@
-from usuario.select import buscar_usuarios, buscar_usuario_id
+from usuario.select import buscar_usuario_cpf, buscar_usuarios
 from usuario.insert import inserir_usuario
 from usuario.update import atualizar_usuario
 from usuario.deletar import excluir_usuario
@@ -11,7 +11,7 @@ def menu_usuario(session):
         print('''
 Opções:
 [1] Buscar todos os usuarios
-[2] Buscar um usuario por id
+[2] Buscar um usuario por cpf
 [3] Cadastrar um novo usuario
 [4] Atualizar informações de um usuario
 [5] Excluir um usuario
@@ -24,7 +24,7 @@ Opções:
             case 1:
                 buscar_usuarios(session)
             case 2:
-                buscar_usuario_id(session)
+                buscar_usuario_cpf(session)
             case 3:
                 inserir_usuario(session)
             case 4:
