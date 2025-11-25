@@ -11,7 +11,7 @@ def menu_vendedor(session):
         print('''
 Opções:
 [1] Buscar todos os vendedores
-[2] Buscar um vendedor por cpf
+[2] Buscar um vendedor por cnpj
 [3] Cadastrar um novo vendedor
 [4] Atualizar informações de um vendedor
 [5] Excluir um vendedor

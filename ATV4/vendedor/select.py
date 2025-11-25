@@ -12,7 +12,6 @@ def buscar_vendedores(session):
 def buscar_vendedor_cnpj(session):
     cnpj_vendedor = input(str("Digite o CNPJ do vendedor para a busca: "))
     
-    # The query must include ALLOW FILTERING because 'cnpj' is not a primary key.
     query = "SELECT * FROM vendedor.vendedores WHERE cnpj = %s ALLOW FILTERING"
     
     vendedor = session.execute(query, [cnpj_vendedor]).one()

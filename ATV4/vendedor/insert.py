@@ -10,7 +10,6 @@ def insert_vendedor(session):
     telefone = input(str('Digite o numero do telefone: '))
     endereco = input(str('Digite o endereço: '))
 
-    # Use keyspace.table corretos: aqui assumo keyspace 'vendedor' e tabela 'vendedores'
     session.execute("""
         INSERT INTO vendedor.vendedores
             (id, nome, email, cnpj, telefone, endereco)

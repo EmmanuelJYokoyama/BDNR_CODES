@@ -2,40 +2,30 @@ import json
 import uuid
 
 def buscar_produtos(session):
-    # Corrected to use the 'mercadolivre' keyspace and select existing columns
-    produtos = session.execute("SELECT id, nome, preco, estoque, vendedor_id FROM mercadolivre.produtos")
-    rows = list(produtos)
-
+    rows = list(session.execute("SELECT id, nome, codigoproduto, preco, estoque FROM mercadolivre.produtos"))
     if rows:
-        print("\n--- Listagem dos produtos ---")
+        print("\n--- Lista de Produtos ---")
         for produto in rows:
-            print(f"| ID: {produto.id}")
-            print(f"| Nome: {produto.nome}")
-            print(f"| Preço: {produto.preco}")
-            print(f"| Estoque: {produto.estoque}")
-            print(f"| Vendedor ID: {produto.vendedor_id}")
-            print("-" * 20)
+            codigo = getattr(produto, 'codigoproduto', None)
+            print(f"ID: {produto.id} | Nome: {produto.nome} | Código: {codigo} | Preço: {produto.preco} | Estoque: {produto.estoque}")
+        print("-------------------------\n")
     else:
-        print("Nenhum produto encontrado...")
+        print("Nenhum produto encontrado.")
 
 def buscar_produto_id(session):
-    buscar_produtos(session)
-    id_produto_str = input(str("Digite o id do produto: "))
-    
+    codigoProduto = input("Digite o codigo do produto: ").strip()
     try:
-        # Convert string to UUID object
-        id_produto = uuid.UUID(id_produto_str)
-        # Use parameterized query
-        rows = session.execute("SELECT * FROM mercadolivre.produtos WHERE id = %s", [id_produto])
-        produto = rows.one()
+        produto = session.execute("SELECT * FROM mercadolivre.produtos WHERE codigoproduto = %s", [int(codigoProduto)]).one()
         if produto:
+            codigo = getattr(produto, 'codigoproduto', None)
             print('\n--- Detalhes do Produto ---')
-            print(f'| id: {produto.id}')
-            print(f'| nome: {produto.nome}')
-            print(f'| descricao: {produto.descricao}')
-            print(f'| preco: {produto.preco}')
-            print(f'| estoque: {produto.estoque}')
-            print(f'| vendedor_id: {produto.vendedor_id}\n')
+            print(f'| ID: {produto.id}')
+            print(f'| Nome: {produto.nome}')
+            print(f'| Código: {codigo}')
+            print(f'| Descrição: {produto.descricao}')
+            print(f'| Preço: {produto.preco}')
+            print(f'| Estoque: {produto.estoque}')
+            print(f'| Vendedor ID: {produto.vendedor_id}\n')
         else:
             print("Produto não encontrado.")
     except (ValueError, TypeError):

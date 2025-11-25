@@ -1,52 +1,80 @@
 from usuario.select import buscar_usuarios
-
 from produto.select import buscar_produtos
-
-from datetime import date
+from datetime import datetime
 import uuid
+from decimal import Decimal
+
+def _next_sequence(session, seq_name: str) -> int:
+   
+    session.execute("UPDATE mercadolivre.sequences SET value = value + 1 WHERE name = %s", [seq_name])
+    row = session.execute("SELECT value FROM mercadolivre.sequences WHERE name = %s", [seq_name]).one()
+    return int(getattr(row, 'value', 0))
 
 def inserir_compra(session):
-    dataAtual = date.today()
-    execucao = True
+    try:
+        print('\n--- Registro de Nova Compra ---')
+        
+        buscar_usuarios(session)
+        cpf_cliente = input('Digite o cpf do comprador (usuário): ').strip()
+        if not cpf_cliente:
+            print("CPF inválido.")
+            return
 
-    buscar_usuarios(session)
-    id_cliente = input(uuid("Digite o id do cliente que irá realizar a compra: "))
-    resultado_busca_cliente = session.execute(f"select * from usuarios where id ='{id_cliente}'")
 
-    if resultado_busca_cliente:
+        comprador_row = session.execute("SELECT id, nome FROM usuarios.usuarios WHERE cpf = %s ALLOW FILTERING", [cpf_cliente]).one()
+        if not comprador_row:
+            print("Comprador não encontrado para o CPF informado.")
+            return
+        comprador_id = comprador_row.id
+        nome_comprador = comprador_row.nome
 
-        while execucao:
+        buscar_produtos(session)
+        codigo_str = input('Digite o código do produto: ').strip()
+        codigo_produto = int(codigo_str)
 
-            buscar_produtos(session)
-            id_produto = input(uuid("Digite o id do produto que deseja comprar: "))
-            resultado_busca_produto = session.execute(f"select * from produtos where id = '{id_produto}'")
-            data_compra = dataAtual.strftime('%d/%m/%Y')
 
-            if resultado_busca_produto:
+        produto = session.execute(
+            "SELECT id, nome, preco, estoque, vendedor_id FROM mercadolivre.produtos WHERE codigoproduto = %s ALLOW FILTERING",
+            [codigo_produto]
+        ).one()
+        if not produto:
+            print("Produto não encontrado.")
+            return
+        
+        produto_id = produto.id
+        nome_produto = produto.nome
+        vendedor_id = produto.vendedor_id
 
-                for cliente in resultado_busca_cliente:
-                    dict_cliente = {'id':cliente.id, 'nome':cliente.nome, 'cpf':cliente.cpf, 'email':cliente.email}
 
-                for produto in resultado_busca_produto:
-                    dict_produto = {'id':produto.id, 'nome':produto.nome, 'preco':produto.preco}
-                    dict_vendedor = produto.vendedor
+        vendedor_row = session.execute("SELECT nome FROM vendedor.vendedores WHERE id = %s", [vendedor_id]).one()
+        nome_vendedor = vendedor_row.nome if vendedor_row else "N/A"
 
-                session.execute("""
-                        insert into compras
-                            (id, data_compra, total, cliente, produto, vendedor)
-                        values
-                            (%s,%s,%s,%s,%s,%s)
-                """,
-                (str(uuid.uuid1()),data_compra, dict_produto['preco'], str(dict_cliente), str(dict_produto), dict_vendedor))
+        print(f"Produto selecionado: {nome_produto} | Estoque disponível: {produto.estoque}")
+        quantidade = int(input('Digite a quantidade desejada: '))
 
-                opcao = input(str("Deseja cadastrar outro produto ? [SIM/NAO] "))
+        if quantidade <= 0 or quantidade > produto.estoque:
+            print("Quantidade inválida ou excede o estoque disponível.")
+            return
 
-                if opcao.upper() != "SIM":
-                    execucao = False
+        preco_total = produto.preco * Decimal(quantidade)
+        numid = _next_sequence(session, 'compras')
 
-            else:
-                print("Produto não encontrado")
+       
+        session.execute("""
+            INSERT INTO mercadolivre.compras
+                (id, numid, comprador_id, nomeComprador, produto_id, nomeProduto, codigoproduto, vendedor_id, nomeVendedor, quantidade, preco_total, data_compra)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        (uuid.uuid1(), numid, comprador_id, nome_comprador, produto_id, nome_produto, codigo_produto, vendedor_id, nome_vendedor, quantidade, preco_total, datetime.now())
+        )
 
-    else:
+        
+        novo_estoque = produto.estoque - quantidade
+        session.execute("UPDATE mercadolivre.produtos SET estoque = %s WHERE id = %s", (novo_estoque, produto_id))
 
-        print("Cliente não encontrado...")
+        print('\nCompra registrada com sucesso. Cód. Compra:', numid)
+
+    except (ValueError, TypeError):
+        print("Valor inválido. Por favor, insira números/UUIDs corretos.")
+    except Exception as e:
+        print(f"Ocorreu um erro ao registrar a compra: {e}")

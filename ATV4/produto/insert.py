@@ -1,39 +1,44 @@
 from vendedor.select import buscar_vendedores
-
-from datetime import date
 import uuid
+from decimal import Decimal
 
 def inserir_produto(session):
-    dataAtual = date.today()
-    execucao = True
-
     buscar_vendedores(session)
 
-    id_vendedor = input(str("Digite o id do vendedor que deseja cadastrar um produto: "))
+    cnpj = input("Digite o cnpj do vendedor para este produto: ").strip()
+    if not cnpj:
+        print("CNPJ inválido.")
+        return
 
-    resultado_busca = session.execute(f"select * from vendedores where id = '{id_vendedor}'")
+    vendedor_row = session.execute("SELECT id FROM vendedor.vendedores WHERE cnpj = %s ALLOW FILTERING", [cnpj]).one()
+    if not vendedor_row:
+        print("Vendedor não encontrado para o CNPJ informado.")
+        return
 
-    for vendedor in resultado_busca:
-        print("vendedor encontrado...")
-        dict = { 'id':vendedor.id, 'nome':vendedor.nome, 'cnpj':vendedor.cnpj, 'email':vendedor.email}
+    id_vendedor = vendedor_row.id
 
-    while execucao:
+    nome = input("Digite o nome do produto: ").strip()
+    descricao = input("Digite a descrição do produto: ").strip()
+    preco_str = input("Digite o preço do produto: ").strip()
+    estoque_str = input("Digite a quantidade em estoque: ").strip()
 
-        nome = input(str("Digite o nome do produto: "))
-        descricao = input(str("Digite a descrição do produto: "))
-        preco = input(str("Digite o preço do produto: "))
-        quantidade = input(str("Digite a quantidade de produtos em estoque: "))
-        data_postagem = dataAtual.strftime('%d/%m/%Y')
+    try:
+        preco = Decimal(preco_str)
+        estoque = int(estoque_str)
+    except Exception:
+        print("Preço ou estoque inválido.")
+        return
 
-        session.execute("""
-                insert into produtos
-                    (id, nome, descricao, preco, quantidade, data_postagem, vendedor )
-                values
-                    (%s,%s,%s,%s,%s,%s,%s)
-        """,
-        (str(uuid.uuid1()),nome, descricao, preco, quantidade, data_postagem, str(dict)))
+    codigo_str = input("Digite o código do produto (número): ").strip()
+    try:
+        codigo = int(codigo_str)
+    except ValueError:
+        print("Código inválido.")
+        return
 
-        opcao = input(str("Deseja cadastrar outro produto ? [SIM/NAO] "))
+    session.execute("""
+        INSERT INTO mercadolivre.produtos (id, codigoProduto, nome, descricao, preco, vendedor_id, estoque)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (uuid.uuid1(), codigo, nome, descricao, preco, id_vendedor, estoque))
 
-        if opcao.upper() != "SIM":
-            execucao = False
+    print("\nProduto cadastrado com sucesso.")

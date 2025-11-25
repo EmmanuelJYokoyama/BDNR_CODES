@@ -10,21 +10,23 @@ from menus.menu_compra import menu_compra
 
 bundle_path = os.path.join(os.path.dirname(__file__), 'secure-connect-mercadolivrecassandra.zip')
 
-cloud_config= {
-  'secure_connect_bundle': bundle_path
+cloud_config = {
+    'secure_connect_bundle': bundle_path
 }
 auth_provider = PlainTextAuthProvider('muwrDkFqmfxlEgwuGRCgPKiO', 'IiaWvnKmZS_uQZ2WkxfZ6n+HrMxmRhANS,P.62dOSGm_GuEj6dE8MhsdOLylhQpdtBL1SueEJgKx7sbTQk4YupaSTDH7CcFFTtkOMsQngOpoprFYtkvMolsOLel60aW3')
+
 cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
-session = cluster.connect('mercadolivre')
+
+session = cluster.connect()
 
 row = session.execute("select release_version from system.local").one()
 
 if row:
     print("Conexão bem sucedida...")
 
-
+    # Criar tabelas explicitando keyspace.tabela
     session.execute("""
-    CREATE TABLE IF NOT EXISTS usuarios (
+    CREATE TABLE IF NOT EXISTS usuarios.usuarios (
         id UUID PRIMARY KEY,
         nome TEXT,
         email TEXT,
@@ -35,9 +37,9 @@ if row:
         endereco TEXT
     );
     """)
-    
+
     session.execute("""
-    CREATE TABLE IF NOT EXISTS vendedor (
+    CREATE TABLE IF NOT EXISTS vendedor.vendedores (
         id UUID PRIMARY KEY,
         nome TEXT,
         email TEXT,
@@ -48,8 +50,9 @@ if row:
     """)
 
     session.execute("""
-    CREATE TABLE IF NOT EXISTS produtos (
+    CREATE TABLE IF NOT EXISTS mercadolivre.produtos (
         id UUID PRIMARY KEY,
+        codigoProduto INT,
         nome TEXT,
         descricao TEXT,
         preco DECIMAL,
@@ -59,22 +62,33 @@ if row:
     """)
 
     session.execute("""
-    CREATE TABLE IF NOT EXISTS compras (
+    CREATE TABLE IF NOT EXISTS mercadolivre.compras (
         id UUID PRIMARY KEY,
+        numid INT,
         comprador_id UUID,
         produto_id UUID,
+        codigoproduto INT,
         vendedor_id UUID,
         quantidade INT,
         preco_total DECIMAL,
         data_compra TIMESTAMP
     );
     """)
+
+    # Adicione este bloco para criar a tabela de sequência
+    session.execute("""
+    CREATE TABLE IF NOT EXISTS mercadolivre.sequences (
+        name TEXT PRIMARY KEY,
+        value COUNTER
+    );
+    """)
+
     print("Tabelas prontas para uso.")
 
     execucao = True
-    
+
     while execucao:
-        
+
         print('''
 Opções:
 [1] Menu do usuario
@@ -83,7 +97,7 @@ Opções:
 [4] Menu da compra
 [0] sair
         ''')
-        
+
         opcao = input(str('Escolha uma das opções a cima: '))
         match (int(opcao)):
             case 1:
