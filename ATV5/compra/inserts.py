@@ -32,7 +32,7 @@ def inserir_compra(session):
                 MATCH
                     (u:Usuario), (p:Produto)
                 WHERE 
-                    ID(u) = {id_usuario} AND ID(p) = {id_produto}
+                    elementId(u) = {id_usuario} AND elementId(p) = {id_produto}
                 CREATE 
                     (u)-[:COMPROU 
                 ''' + '{ data_compra:" '  + str(data_compra) + '"}]->(p)')

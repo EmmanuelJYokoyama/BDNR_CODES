@@ -5,16 +5,21 @@ from menus.menu_produto import menu_produto
 from menus.menu_vendedor import menu_vendedor
 from menus.menu_compra import menu_compra
 
-uri = "neo4j+s://1671e70c.databases.neo4j.io"
+uri = "neo4j+ssc://1671e70c.databases.neo4j.io"
 user = "neo4j"
-password = "4LPL3ZekXAfhwKOUe8QzZd-LveQm_mvNhqjEPIVJalI"
+password = "7Rq2htnTScVAlv8d1katOBSscMvPGqb1v4cTfj4GMqs"
 
+session = None
 try:
     driver = GraphDatabase.driver(uri, auth=(user, password))
     session = driver.session()
     print("Conexão bem sucedida...")
 except Exception as erro:
-    print("Falha ao criar conexão com o driver", erro)
+    print("Falha ao criar conexão com o driver:", erro)
+
+# Exit if the connection failed
+if not session:
+    exit()
 
 execucao = True
 

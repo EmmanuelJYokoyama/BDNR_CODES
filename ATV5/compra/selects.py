@@ -1,7 +1,5 @@
 def buscar_compras(session):
 
-    # MATCH (u:Usuario)-[c:COMPROU] ->(p:Produto) RETURN *
-
     lista_compras = session.run('MATCH (u:Usuario)-[c:COMPROU] ->(p:Produto) RETURN *')
 
     for c in lista_compras:
